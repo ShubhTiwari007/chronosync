@@ -11,16 +11,25 @@
         onEvent: function(event) {
           switch (event.name) {
             case "SDK_GAME_PAUSE":
+              if (typeof window.onSDKPause === 'function') {
+                window.onSDKPause();
+              }
               if (window.sdkCallbacks && typeof window.sdkCallbacks.onAdStarted === 'function') {
                 window.sdkCallbacks.onAdStarted();
               }
               break;
             case "SDK_GAME_START":
+              if (typeof window.onSDKResume === 'function') {
+                window.onSDKResume();
+              }
               if (window.sdkCallbacks && typeof window.sdkCallbacks.onAdFinished === 'function') {
                 window.sdkCallbacks.onAdFinished();
               }
               break;
             case "SDK_ERROR":
+              if (typeof window.onSDKResume === 'function') {
+                window.onSDKResume();
+              }
               if (window.sdkCallbacks && typeof window.sdkCallbacks.onAdFinished === 'function') {
                 window.sdkCallbacks.onAdFinished();
               }

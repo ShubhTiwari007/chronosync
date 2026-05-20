@@ -9,7 +9,8 @@ import {
   signalGameplayStop,
   triggerHappytime,
   saveData,
-  loadData
+  loadData,
+  initSDK
 } from './utils/crazyGamesSDK';
 
 function App() {
@@ -20,15 +21,61 @@ function App() {
   const [adActive, setAdActive] = useState(false);
 
   useEffect(() => {
+    // Initialize SDK hooks
+    initSDK();
+
+    window.onSDKPause = () => {
+      console.log("[Global SDK] Pause event triggered.");
+      setAdActive(true);
+      setMute(true);
+    };
+    window.onSDKResume = () => {
+      console.log("[Global SDK] Resume event triggered.");
+      setAdActive(false);
+      setMuteState(prev => {
+        setMute(prev);
+        return prev;
+      });
+    };
+
+    return () => {
+      window.onSDKPause = null;
+      window.onSDKResume = null;
+    };
+  }, []);
+
+  useEffect(() => {
     // Sync mute status
     setMute(mute);
     saveData('chronosync_mute', mute);
   }, [mute]);
 
   const handleLaunchGame = (selectedLevel = 1) => {
-    setLevel(selectedLevel);
-    setGameState('playing');
-    signalGameplayStart();
+    const startPlay = () => {
+      setLevel(selectedLevel);
+      setGameState('playing');
+      signalGameplayStart();
+    };
+
+    // Trigger ad break on game launch
+    setAdActive(true);
+    setMute(true);
+
+    requestMidgameAd({
+      adStarted: () => {
+        console.log("Launch game ad started.");
+      },
+      adFinished: () => {
+        setAdActive(false);
+        setMute(mute);
+        startPlay();
+      },
+      adError: () => {
+        setAdActive(false);
+        setMute(mute);
+        startPlay();
+      }
+    });
   };
 
   const handleLevelClear = () => {
