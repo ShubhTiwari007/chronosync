@@ -44,6 +44,16 @@ export function initSDK() {
       activeAdCallbacks = null;
     }
   };
+
+  // 3. Initialize CrazyGames SDK v3 if present
+  if (window.CrazyGames && window.CrazyGames.SDK) {
+    try {
+      window.CrazyGames.SDK.init();
+      console.log("[CrazyGames SDK] SDK v3 initialized successfully.");
+    } catch (e) {
+      console.error("[CrazyGames SDK] Failed to initialize:", e);
+    }
+  }
 }
 
 export function requestMidgameAd(callbacks) {
