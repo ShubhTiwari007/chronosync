@@ -397,40 +397,66 @@ function GameCanvas({ level, onLevelClear, onGameOver, onQuit }) {
       }
 
       // Draw cyber space background
-      ctx.fillStyle = '#03030e';
+      ctx.fillStyle = '#020108';
       ctx.fillRect(0, 0, W, H);
 
-      // Grid lines
-      ctx.strokeStyle = 'rgba(0, 242, 254, 0.04)';
-      ctx.lineWidth = 0.5;
-      const grid = 50;
-      for (let x = 0; x < W; x += grid) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      // Parallax warp background lines
+      ctx.strokeStyle = 'rgba(0, 242, 254, 0.02)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      const grid = 60;
+      const driftX = (Date.now() * 0.015) % grid;
+      const driftY = (Date.now() * 0.01) % grid;
+      for (let x = driftX; x < W; x += grid) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, H);
       }
-      for (let y = 0; y < H; y += grid) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      for (let y = driftY; y < H; y += grid) {
+        ctx.moveTo(0, y); ctx.lineTo(W, y);
+      }
+      ctx.stroke();
+
+      // Scanline overlay
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.008)';
+      for (let y = 0; y < H; y += 4) {
+        ctx.fillRect(0, y, W, 1);
       }
 
-      // Draw Switches
+      // Draw Switches (3D Holographic Pads)
       state.switches.forEach(sw => {
         const x = sw.x * W;
         const y = sw.y * H;
+        
+        // Outer tech ring
+        ctx.strokeStyle = sw.pressed ? '#00ff87' : 'rgba(0, 242, 254, 0.25)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(x, y, sw.radius, 0, Math.PI * 2);
-        ctx.fillStyle = sw.pressed ? 'rgba(0, 255, 135, 0.25)' : 'rgba(0, 242, 254, 0.1)';
-        ctx.fill();
-        ctx.strokeStyle = sw.pressed ? '#00ff87' : 'rgba(0, 242, 254, 0.6)';
-        ctx.lineWidth = 2.5;
+        ctx.arc(x, y, sw.radius + 5, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Inner core
+        // 3D Pad casing
+        ctx.fillStyle = '#111024';
+        ctx.strokeStyle = sw.pressed ? '#00ff87' : '#00f2fe';
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.arc(x, y, sw.radius * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = sw.pressed ? '#00ff87' : 'rgba(0, 242, 254, 0.4)';
+        ctx.arc(x, y, sw.radius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
+
+        // Glowing center core indicator
+        if (sw.pressed) {
+          ctx.shadowColor = '#00ff87';
+          ctx.shadowBlur = 10;
+          ctx.fillStyle = '#00ff87';
+        } else {
+          ctx.fillStyle = 'rgba(0, 242, 254, 0.3)';
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, sw.radius * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
       });
 
-      // Draw Security Gates
+      // Draw Security Gates (Glowing Holographic Forcefields)
       state.gates.forEach(gate => {
         const x = gate.x * W;
         const y = gate.y * H;
@@ -439,57 +465,129 @@ function GameCanvas({ level, onLevelClear, onGameOver, onQuit }) {
 
         ctx.save();
         if (gate.open) {
-          ctx.strokeStyle = 'rgba(0, 255, 135, 0.2)';
-          ctx.fillStyle = 'rgba(0, 255, 135, 0.03)';
+          ctx.strokeStyle = 'rgba(0, 255, 135, 0.15)';
+          ctx.fillStyle = 'rgba(0, 255, 135, 0.02)';
           ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.rect(x, y, w, h);
+          ctx.fill();
+          ctx.stroke();
         } else {
-          ctx.strokeStyle = '#ff007f';
-          ctx.fillStyle = 'rgba(255, 0, 127, 0.12)';
-          // Pulse effect border
+          // Pulse intensity
+          const pulse = 0.5 + 0.3 * Math.sin(Date.now() * 0.015);
+          ctx.fillStyle = `rgba(255, 0, 127, ${0.08 + pulse * 0.06})`;
+          ctx.fillRect(x, y, w, h);
+
+          // Diagonal warning stripes inside
+          ctx.strokeStyle = `rgba(255, 0, 127, ${0.1 + pulse * 0.15})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          const stripeW = 8;
+          for (let sx = x - h; sx < x + w; sx += stripeW) {
+            ctx.moveTo(Math.max(x, sx), y);
+            ctx.lineTo(Math.min(x + w, sx + h), y + h);
+          }
+          ctx.stroke();
+
+          // Neon glowing border
           ctx.shadowColor = '#ff007f';
           ctx.shadowBlur = 10;
+          ctx.strokeStyle = '#ff007f';
+          ctx.lineWidth = 2.5;
+          ctx.strokeRect(x, y, w, h);
         }
-
-        ctx.beginPath();
-        ctx.rect(x, y, w, h);
-        ctx.fill();
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
         ctx.restore();
       });
 
-      // Draw Lasers (obstructions)
+      // Draw Lasers (obstructions - glowing double-layered lightning laser lines!)
       state.lasers.forEach(laser => {
         ctx.save();
+        const lx1 = laser.x1 * W;
+        const ly1 = laser.y1 * H;
+        const lx2 = laser.x2 * W;
+        const ly2 = laser.y2 * H;
+
+        // Outer neon aura glow
+        ctx.strokeStyle = 'rgba(255, 0, 85, 0.2)';
+        ctx.lineWidth = 7.0;
+        ctx.beginPath();
+        ctx.moveTo(lx1, ly1); ctx.lineTo(lx2, ly2);
+        ctx.stroke();
+
+        // Laser core beam
         ctx.strokeStyle = '#ff0055';
         ctx.lineWidth = 3.0;
         ctx.shadowColor = '#ff0055';
         ctx.shadowBlur = 12;
         ctx.beginPath();
-        ctx.moveTo(laser.x1 * W, laser.y1 * H);
-        ctx.lineTo(laser.x2 * W, laser.y2 * H);
+        ctx.moveTo(lx1, ly1); ctx.lineTo(lx2, ly2);
         ctx.stroke();
+
+        // Specular highlight white center core line
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.0;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(lx1, ly1); ctx.lineTo(lx2, ly2);
+        ctx.stroke();
+
+        // End emitter terminals
+        ctx.fillStyle = '#1c1926';
+        ctx.strokeStyle = '#ff0055';
+        ctx.lineWidth = 1.5;
+        const terminals = [[lx1, ly1], [lx2, ly2]];
+        terminals.forEach(([tx, ty]) => {
+          ctx.beginPath();
+          ctx.arc(tx, ty, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+
         ctx.restore();
       });
 
-      // Draw Destination Portal
+      // Draw Destination Portal (Cyber event horizon gravity well)
       const destX = state.destination.x * W;
       const destY = state.destination.y * H;
-      const pulseRadius = state.destination.radius + Math.sin(state.loopTime * 0.08) * 4;
+      const destR = state.destination.radius;
+      const pulseRadius = destR + Math.sin(state.loopTime * 0.08) * 3;
+
+      ctx.save();
+      ctx.shadowColor = '#00ff87';
+      ctx.shadowBlur = 16;
+
+      // Outer swirling aura
+      ctx.fillStyle = 'rgba(0, 255, 135, 0.08)';
+      ctx.beginPath();
+      ctx.arc(destX, destY, pulseRadius + 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Outer segmented rotating tech ring
+      ctx.strokeStyle = '#00ff87';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(destX, destY, destR + 4, Date.now() * 0.003, Date.now() * 0.003 + Math.PI * 1.2);
+      ctx.stroke();
 
       ctx.beginPath();
-      ctx.arc(destX, destY, pulseRadius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 255, 135, 0.15)';
-      ctx.fill();
-      ctx.strokeStyle = '#00ff87';
-      ctx.lineWidth = 2.5;
+      ctx.arc(destX, destY, destR + 4, Date.now() * -0.002 + Math.PI, Date.now() * -0.002 + Math.PI * 2.2);
       ctx.stroke();
-      
-      // Inner star portal
-      ctx.beginPath();
-      ctx.arc(destX, destY, state.destination.radius * 0.5, 0, Math.PI * 2);
+
+      // Inner singularity
+      ctx.fillStyle = '#00ff8 green';
       ctx.fillStyle = '#00ff87';
+      ctx.beginPath();
+      ctx.arc(destX, destY, destR * 0.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Label inside singularity
+      ctx.fillStyle = '#020108';
+      ctx.font = 'bold 8px Orbitron';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText("SYNC", destX, destY);
+      ctx.restore();
 
       // Slingshot Aim Line
       if (state.isDragging && state.dragStart && state.dragCurrent) {
@@ -502,88 +600,114 @@ function GameCanvas({ level, onLevelClear, onGameOver, onQuit }) {
           const launchVx = (dx / dist) * power * 1.5;
           const launchVy = (dy / dist) * power * 1.5;
 
-          // Draw dotted predicted path
-          ctx.beginPath();
-          ctx.moveTo(state.player.x * W, state.player.y * H);
-          
+          // Draw predicted path using glowing dots
+          ctx.save();
           let tempX = state.player.x * W;
           let tempY = state.player.y * H;
           let tempVx = launchVx;
           let tempVy = launchVy;
 
-          for (let i = 0; i < 60; i++) {
+          for (let i = 0; i < 40; i++) {
             tempVx *= 0.992;
             tempVy *= 0.992;
             tempX += tempVx;
             tempY += tempVy;
             if (i % 2 === 0) {
-              ctx.lineTo(tempX, tempY);
+              ctx.fillStyle = `rgba(0, 242, 254, ${1 - i / 40})`;
+              ctx.beginPath();
+              ctx.arc(tempX, tempY, 2.0, 0, Math.PI * 2);
+              ctx.fill();
             }
           }
-
-          ctx.strokeStyle = 'rgba(0, 242, 254, 0.5)';
-          ctx.lineWidth = 2.0;
-          ctx.setLineDash([4, 6]);
-          ctx.stroke();
-          ctx.setLineDash([]);
+          ctx.restore();
 
           // Vector indicator arrow
+          ctx.save();
+          ctx.shadowColor = '#00f2fe';
+          ctx.shadowBlur = 8;
           ctx.beginPath();
           ctx.moveTo(state.player.x * W, state.player.y * H);
           ctx.lineTo(state.player.x * W + launchVx * 4, state.player.y * H + launchVy * 4);
           ctx.strokeStyle = '#00f2fe';
           ctx.lineWidth = 2.5;
           ctx.stroke();
+          ctx.restore();
         }
       }
 
-      // Draw Echo paths and core spheres
+      // Draw Echo paths and core spheres (Holographic loops)
       state.echoes.forEach((echo, idx) => {
         if (echo.active) {
           const eX = echo.x * W;
           const eY = echo.y * H;
 
+          ctx.save();
           // Echo pulse glow ring
-          ctx.beginPath();
-          ctx.arc(eX, eY, state.player.radius + 6, 0, Math.PI * 2);
+          ctx.shadowColor = '#00ff87';
+          ctx.shadowBlur = 12;
           ctx.fillStyle = 'rgba(0, 255, 135, 0.08)';
-          ctx.fill();
-
-          // Echo core
           ctx.beginPath();
-          ctx.arc(eX, eY, state.player.radius, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(0, 255, 135, 0.6)';
+          ctx.arc(eX, eY, state.player.radius + 4, 0, Math.PI * 2);
           ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Holographic target brackets rotating
+          ctx.strokeStyle = '#00ff87';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(eX, eY, state.player.radius + 6, Date.now() * 0.015, Date.now() * 0.015 + Math.PI * 0.5);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(eX, eY, state.player.radius + 6, Date.now() * 0.015 + Math.PI, Date.now() * 0.015 + Math.PI * 1.5);
+          ctx.stroke();
+
+          // Semi-transparent Echo core
+          ctx.fillStyle = 'rgba(0, 255, 135, 0.45)';
           ctx.strokeStyle = '#00ff87';
           ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.arc(eX, eY, state.player.radius, 0, Math.PI * 2);
+          ctx.fill();
           ctx.stroke();
 
           // Draw 'E' inside core
           ctx.fillStyle = '#03030a';
-          ctx.font = '10px Orbitron';
+          ctx.font = 'bold 9px Orbitron';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(`E${idx+1}`, eX, eY);
+          ctx.restore();
         }
       });
 
-      // Draw Current Player Core
+      // Draw Current Player Core (Interactive glowing plasma ball)
       if (!state.clearPending) {
         const pX = state.player.x * W;
         const pY = state.player.y * H;
 
+        ctx.save();
+        ctx.shadowColor = '#00f2fe';
+        ctx.shadowBlur = 15;
+        
+        ctx.fillStyle = 'rgba(0, 242, 254, 0.15)';
         ctx.beginPath();
-        ctx.arc(pX, pY, state.player.radius + 6, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 242, 254, 0.12)';
+        ctx.arc(pX, pY, state.player.radius + 4, 0, Math.PI * 2);
         ctx.fill();
 
+        // Concentric outer ring
+        ctx.strokeStyle = '#00f2fe';
+        ctx.lineWidth = 2.0;
         ctx.beginPath();
         ctx.arc(pX, pY, state.player.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#00f2fe';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2.0;
         ctx.stroke();
+
+        // Bright white center core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(pX, pY, state.player.radius * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
       }
 
       // Draw explosion particles
